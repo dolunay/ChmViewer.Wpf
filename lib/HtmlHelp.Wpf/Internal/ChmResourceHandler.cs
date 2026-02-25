@@ -65,7 +65,7 @@ internal sealed class ChmResourceHandler : ResourceHandler
 				}
 
 				StatusCode = 200;
-				MimeType = GetMimeTypeFromPath(normalized);
+				MimeType = GetMimeTypeFromPath(normalized, resourceType);
 				Charset = MimeType == "text/html" ? "utf-8" : null;
 				ResponseLength = bytes.Length;
 				Stream = new MemoryStream(bytes, writable: false);
@@ -112,11 +112,31 @@ internal sealed class ChmResourceHandler : ResourceHandler
 		}
 	}
 
-	private static string GetMimeTypeFromPath(string path)
+	private static string GetMimeTypeFromPath(string path, ResourceType resourceType)
 	{
-		var ext = Path.GetExtension(path);
+		if (string.IsNullOrWhiteSpace(path))
+			return resourceType is ResourceType.MainFrame or ResourceType.SubFrame
+				? "text/html"
+				: "application/octet-stream";
+
+		// Avoid `Path.GetExtension` here. CHM content can contain URL-like paths that aren't valid
+		// Windows file system paths, which can make `Path` APIs throw.
+		var queryIdx = path.IndexOfAny(['?', '#']);
+		if (queryIdx >= 0)
+			path = path[..queryIdx];
+
+		var lastSlash = path.LastIndexOf('/');
+		var lastDot = path.LastIndexOf('.');
+		if (lastDot < 0 || lastDot < lastSlash)
+			return resourceType is ResourceType.MainFrame or ResourceType.SubFrame
+				? "text/html"
+				: "application/octet-stream";
+
+		var ext = path[lastDot..];
 		if (string.IsNullOrWhiteSpace(ext))
-			return "application/octet-stream";
+			return resourceType is ResourceType.MainFrame or ResourceType.SubFrame
+				? "text/html"
+				: "application/octet-stream";
 
 		switch (ext.ToLowerInvariant())
 		{
@@ -145,7 +165,9 @@ internal sealed class ChmResourceHandler : ResourceHandler
 			case ".txt":
 				return "text/plain";
 			default:
-				return "application/octet-stream";
+				return resourceType is ResourceType.MainFrame or ResourceType.SubFrame
+					? "text/html"
+					: "application/octet-stream";
 		}
 	}
 }

@@ -3,7 +3,7 @@
 		<TargetFramework>net10.0-windows</TargetFramework>
 		<OutputType>WinExe</OutputType>
 		<RootNamespace>ChmViewer</RootNamespace>
-		<AssemblyName>HelpSample</AssemblyName>
+		<AssemblyName>ChmViewer</AssemblyName>
 		<LangVersion>latest</LangVersion>
 		<Nullable>disable</Nullable>
 		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>

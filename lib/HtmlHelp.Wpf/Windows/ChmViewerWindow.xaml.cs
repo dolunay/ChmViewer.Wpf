@@ -24,7 +24,7 @@ public partial class ChmViewerWindow : Window
 		return Viewer.LoadAsync(chmFilePath, cancellationToken);
 	}
 
-	private async void OnLoaded(object sender, RoutedEventArgs e)
+	private void OnLoaded(object sender, RoutedEventArgs e)
 	{
 		if (_loaded)
 			return;
@@ -37,7 +37,7 @@ public partial class ChmViewerWindow : Window
 		if (string.IsNullOrWhiteSpace(ChmFilePath))
 			return;
 
-		await Viewer.LoadAsync(ChmFilePath);
+		Viewer.ChmFilePath = ChmFilePath;
 	}
 
 	public void SetChmFilePathForAutoLoad(string chmFilePath)

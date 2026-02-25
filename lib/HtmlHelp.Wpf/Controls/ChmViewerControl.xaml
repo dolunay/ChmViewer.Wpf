@@ -4,6 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:cefSharp="clr-namespace:CefSharp.Wpf;assembly=CefSharp.Wpf"
+             xmlns:controls="clr-namespace:HtmlHelp.Wpf.Controls"
              xmlns:htmlHelp="clr-namespace:HtmlHelp;assembly=HtmlHelp"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
@@ -16,7 +17,9 @@
         </Grid.ColumnDefinitions>
 
         <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}">
-            <TreeView x:Name="TocTree" SelectedItemChanged="TocTree_SelectedItemChanged">
+			<TreeView x:Name="TocTree"
+					  ItemsSource="{Binding TocItems}"
+					  controls:TreeViewSelectedItemBehavior.SelectedItem="{Binding SelectedTocItem, Mode=TwoWay}">
                 <TreeView.Resources>
                     <HierarchicalDataTemplate DataType="{x:Type htmlHelp:TOCItem}" ItemsSource="{Binding Children}">
                         <TextBlock Text="{Binding Name}" />
@@ -27,6 +30,6 @@
 
         <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent" />
 
-        <cefSharp:ChromiumWebBrowser x:Name="Browser" Address="https://www.google.com" Grid.Column="2" />
+		<cefSharp:ChromiumWebBrowser x:Name="Browser" Address="{Binding Address}" Grid.Column="2" />
     </Grid>
 </UserControl>

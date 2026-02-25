@@ -1,10 +1,9 @@
 using CefSharp;
 using CefSharp.Handler;
 using HtmlHelp.Wpf.Internal;
-using HtmlHelp;
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -14,18 +13,53 @@ namespace HtmlHelp.Wpf.Controls;
 
 public partial class ChmViewerControl : UserControl, IDisposable
 {
-	private ChmDocument _document;
-	private string _documentId;
+	public static readonly DependencyProperty ViewModelProperty = DependencyProperty.Register(
+		nameof(ViewModel),
+		typeof(ChmViewerViewModel),
+		typeof(ChmViewerControl),
+		new PropertyMetadata(null, OnViewModelChanged));
+
+	public static readonly DependencyProperty ChmFilePathProperty = DependencyProperty.Register(
+		nameof(ChmFilePath),
+		typeof(string),
+		typeof(ChmViewerControl),
+		new PropertyMetadata(null, OnChmFilePathChanged));
+
+	private readonly ChmViewerViewModel _createdViewModel;
+	private CancellationTokenSource _autoLoadCts;
+	private bool _suppressAutoLoad;
+	private bool _settingFallbackViewModel;
 	private bool _disposed;
+	private bool _ownsViewModel;
+	private volatile string _documentIdForRequests;
+	private ChmViewerViewModel _subscribedViewModel;
 
 	public ChmViewerControl()
 	{
 		CefSharpInitializer.EnsureInitialized();
 
 		InitializeComponent();
+
+		_createdViewModel = new ChmViewerViewModel(Dispatcher);
+		_ownsViewModel = true;
+		SetCurrentValue(ViewModelProperty, _createdViewModel);
+		AttachToViewModel(_createdViewModel);
+
 		Browser.RequestHandler = new ChmRequestHandler(this);
 		Browser.LoadError += Browser_LoadError;
 		Unloaded += OnUnloaded;
+	}
+
+	public ChmViewerViewModel ViewModel
+	{
+		get => (ChmViewerViewModel)GetValue(ViewModelProperty) ?? _createdViewModel;
+		set => SetValue(ViewModelProperty, value);
+	}
+
+	public string ChmFilePath
+	{
+		get => (string)GetValue(ChmFilePathProperty);
+		set => SetValue(ChmFilePathProperty, value);
 	}
 
 	private void Browser_LoadError(object sender, LoadErrorEventArgs e)
@@ -74,10 +108,15 @@ public partial class ChmViewerControl : UserControl, IDisposable
 			if (string.IsNullOrWhiteSpace(url))
 				return false;
 
-			if (_owner._documentId == null)
+			// IMPORTANT: Do not touch DependencyObject/DPs here. CefSharp may invoke this callback
+			// on a non-UI thread, and accessing WPF DPs will throw VerifyAccess.
+			var documentId = _owner._documentIdForRequests;
+			if (string.IsNullOrWhiteSpace(documentId))
 				return false;
 
-			if (Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme.Equals("chm", StringComparison.OrdinalIgnoreCase))
+			if (Uri.TryCreate(url, UriKind.Absolute, out var uri)
+				&& uri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase)
+				&& uri.Host.Equals("chm.local", StringComparison.OrdinalIgnoreCase))
 				return false;
 
 			// CHM HTML commonly links to topics/resources using MSITStore-style URLs.
@@ -93,7 +132,7 @@ public partial class ChmViewerControl : UserControl, IDisposable
 			if (string.IsNullOrWhiteSpace(local))
 				return false;
 
-			rewritten = $"chm://local/{_owner._documentId}/{local}";
+			rewritten = $"http://chm.local/{documentId}/{local}";
 			return true;
 		}
 	}
@@ -101,122 +140,24 @@ public partial class ChmViewerControl : UserControl, IDisposable
 	public async Task LoadAsync(string chmFilePath, CancellationToken cancellationToken = default)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(chmFilePath);
+		ThrowIfDisposed();
 
-		await Dispatcher.InvokeAsync(() =>
+		_suppressAutoLoad = true;
+		try
 		{
-			ThrowIfDisposed();
-			CloseCurrentDocument();
-		});
-
-		// HtmlHelp + CHM parsing is CPU/IO bound; keep UI responsive.
-		var doc = await Task.Run(() => new ChmDocument(chmFilePath), cancellationToken);
-
-		await Dispatcher.InvokeAsync(() =>
+			SetCurrentValue(ChmFilePathProperty, chmFilePath);
+		}
+		finally
 		{
-			ThrowIfDisposed();
-
-			_document = doc;
-			_documentId = Guid.NewGuid().ToString("N");
-			ChmDocumentRegistry.Register(_documentId, doc);
-
-			TocTree.ItemsSource = doc.TocItems.ToList();
-
-			var startLocal = ChmUrlHelper.TryExtractLocalFromDefaultTopic(doc.DefaultTopicUrl)
-				?? FindFirstNavigableLocal(TocTree.ItemsSource);
-
-			if (!string.IsNullOrWhiteSpace(startLocal))
-				NavigateToLocal(startLocal);
-		});
-	}
-
-	private static string FindFirstNavigableLocal(object tocItemsSource)
-	{
-		if (tocItemsSource is not System.Collections.IEnumerable enumerable)
-			return null;
-
-		foreach (var item in enumerable)
-		{
-			if (item is TOCItem tocItem)
-			{
-				var local = FindFirstNavigableLocal(tocItem);
-				if (!string.IsNullOrWhiteSpace(local))
-					return local;
-			}
+			_suppressAutoLoad = false;
 		}
 
-		return null;
-	}
-
-	private static string FindFirstNavigableLocal(TOCItem tocItem)
-	{
-		if (!string.IsNullOrWhiteSpace(tocItem.Local) && !ChmUrlHelper.IsExternalUrl(tocItem.Local))
-			return tocItem.Local;
-
-		if (tocItem.Children == null)
-			return null;
-
-		foreach (var child in tocItem.Children)
-		{
-			if (child is TOCItem childItem)
-			{
-				var local = FindFirstNavigableLocal(childItem);
-				if (!string.IsNullOrWhiteSpace(local))
-					return local;
-			}
-		}
-
-		return null;
-	}
-
-	private void TocTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
-	{
-		if (_documentId == null)
-			return;
-
-		if (e.NewValue is not TOCItem item)
-			return;
-
-		if (string.IsNullOrWhiteSpace(item.Local))
-			return;
-
-		if (ChmUrlHelper.IsExternalUrl(item.Local))
-		{
-			Browser.Address = item.Local;
-			return;
-		}
-
-		NavigateToLocal(item.Local);
-	}
-
-	private void NavigateToLocal(string local)
-	{
-		if (_documentId == null)
-			return;
-
-		local = ChmUrlHelper.NormalizeLocalPath(local);
-		Debug.WriteLine($"[CefSharp][CHM] NavigateToLocal documentId={_documentId} local={local}");
-		var url = $"http://chm.local/{_documentId}/{local}";
-		Debug.WriteLine($"[CefSharp][CHM] Navigate url={url}");
-		Browser.Address = url;
+		await ViewModel.LoadAsync(chmFilePath, cancellationToken);
 	}
 
 	private void OnUnloaded(object sender, RoutedEventArgs e)
 	{
 		Dispose();
-	}
-
-	private void CloseCurrentDocument()
-	{
-		if (_documentId != null)
-			ChmDocumentRegistry.Unregister(_documentId);
-
-		_documentId = null;
-
-		_document?.Dispose();
-		_document = null;
-
-		TocTree.ItemsSource = null;
-		Browser.Address = "about:blank";
 	}
 
 	private void ThrowIfDisposed()
@@ -225,17 +166,125 @@ public partial class ChmViewerControl : UserControl, IDisposable
 			throw new ObjectDisposedException(nameof(ChmViewerControl));
 	}
 
+	private static void OnViewModelChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+		=> ((ChmViewerControl)d).OnViewModelChanged((ChmViewerViewModel)e.OldValue, (ChmViewerViewModel)e.NewValue);
+
+	private void OnViewModelChanged(ChmViewerViewModel oldViewModel, ChmViewerViewModel newViewModel)
+	{
+		DetachFromViewModel(oldViewModel);
+		oldViewModel?.Close();
+
+		if (newViewModel == null)
+		{
+			if (_settingFallbackViewModel)
+				return;
+
+			_settingFallbackViewModel = true;
+			try
+			{
+				SetCurrentValue(ViewModelProperty, _createdViewModel);
+			}
+			finally
+			{
+				_settingFallbackViewModel = false;
+			}
+
+			return;
+		}
+
+		AttachToViewModel(newViewModel);
+
+		_ownsViewModel = ReferenceEquals(newViewModel, _createdViewModel);
+
+		if (ReferenceEquals(DataContext, oldViewModel))
+			DataContext = null;
+
+		DataContext = newViewModel;
+	}
+
+	private void AttachToViewModel(ChmViewerViewModel viewModel)
+	{
+		if (viewModel == null)
+			return;
+
+		_subscribedViewModel = viewModel;
+		_documentIdForRequests = viewModel.DocumentId;
+		viewModel.PropertyChanged += ViewModel_PropertyChanged;
+	}
+
+	private void DetachFromViewModel(ChmViewerViewModel viewModel)
+	{
+		if (viewModel == null)
+			return;
+
+		if (!ReferenceEquals(_subscribedViewModel, viewModel))
+			return;
+
+		viewModel.PropertyChanged -= ViewModel_PropertyChanged;
+		_subscribedViewModel = null;
+		_documentIdForRequests = null;
+	}
+
+	private void ViewModel_PropertyChanged(object sender, PropertyChangedEventArgs e)
+	{
+		if (!string.Equals(e.PropertyName, nameof(ChmViewerViewModel.DocumentId), StringComparison.Ordinal))
+			return;
+
+		if (sender is ChmViewerViewModel vm)
+			_documentIdForRequests = vm.DocumentId;
+	}
+
+	private static void OnChmFilePathChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+		=> ((ChmViewerControl)d).OnChmFilePathChanged((string)e.NewValue);
+
+	private async void OnChmFilePathChanged(string chmFilePath)
+	{
+		if (_disposed || _suppressAutoLoad)
+			return;
+
+		_autoLoadCts?.Cancel();
+		_autoLoadCts?.Dispose();
+		_autoLoadCts = null;
+
+		if (string.IsNullOrWhiteSpace(chmFilePath))
+		{
+			ViewModel.Close();
+			return;
+		}
+
+		_autoLoadCts = new CancellationTokenSource();
+		try
+		{
+			await ViewModel.LoadAsync(chmFilePath, _autoLoadCts.Token);
+		}
+		catch (OperationCanceledException)
+		{
+			// ignore
+		}
+		catch (Exception ex)
+		{
+			Debug.WriteLine($"[CefSharp][CHM] AutoLoad failed path={chmFilePath} error={ex}");
+		}
+	}
+
 	public void Dispose()
 	{
 		if (_disposed)
 			return;
 
 		_disposed = true;
+		_autoLoadCts?.Cancel();
+		_autoLoadCts?.Dispose();
+		_autoLoadCts = null;
+
 		Unloaded -= OnUnloaded;
 		Browser.LoadError -= Browser_LoadError;
 		Browser.RequestHandler = null;
+		DetachFromViewModel(ViewModel);
 
-		CloseCurrentDocument();
+		ViewModel?.Close();
+		if (_ownsViewModel)
+			ViewModel?.Dispose();
 
 		// Do not call Cef.Shutdown here; this is a library control and shutdown is process-wide.
 	}

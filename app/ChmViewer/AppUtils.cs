@@ -1,6 +1,7 @@
 using CefSharp;
 using CefSharp.Wpf;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 
@@ -21,6 +22,17 @@ namespace ChmViewer
                 CachePath = cachePath
             };
 
+			try
+			{
+				Directory.CreateDirectory(cachePath);
+				settings.LogFile = Path.Combine(cachePath, "cef.log");
+				settings.LogSeverity = LogSeverity.Info;
+			}
+			catch (Exception ex)
+			{
+				Debug.WriteLine($"[CefSharp][Init] Failed to configure log file: {ex.GetType().Name}:{ex.Message}");
+			}
+
             //Example of setting a command line argument
             //Enables WebRTC
             // - CEF Doesn't currently support permissions on a per browser basis see https://bitbucket.org/chromiumembedded/cef/issues/2582/allow-run-time-handling-of-media-access
@@ -36,7 +48,7 @@ namespace ChmViewer
             //Example of checking if a call to Cef.Initialize has already been made, we require this for
             //our .Net 5.0 Single File Publish example, you don't typically need to perform this check
             //if you call Cef.Initialze within your WPF App constructor.
-            if (Cef.IsInitialized == null)
+            if (Cef.IsInitialized != true)
             {
                 //Perform dependency check to make sure all relevant resources are in our output directory.
                 var initialized = Cef.Initialize(settings, performDependencyCheck: true, browserProcessHandler: null);
