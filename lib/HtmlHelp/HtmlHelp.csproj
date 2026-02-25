@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<OutputType>Library</OutputType>
+		<RootNamespace>HtmlHelp</RootNamespace>
+		<AssemblyName>HtmlHelp</AssemblyName>
+		<LangVersion>latest</LangVersion>
+		<Nullable>disable</Nullable>
+		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
+		<NoWarn>$(NoWarn);CA1416</NoWarn>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="SharpZipLib" Version="1.4.2" />
+		<PackageReference Include="System.Resources.Extensions" Version="10.0.2" />
+	</ItemGroup>
+</Project>

@@ -1,0 +1,65 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net10.0-windows</TargetFramework>
+		<OutputType>WinExe</OutputType>
+		<RootNamespace>HelpSample</RootNamespace>
+		<AssemblyName>HelpSample</AssemblyName>
+		<LangVersion>latest</LangVersion>
+		<Nullable>disable</Nullable>
+		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+		<UseWPF>true</UseWPF>
+		<UseWindowsForms>true</UseWindowsForms>
+		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+		<NoWarn>$(NoWarn);CA1416</NoWarn>
+		<Platforms>x86;x64;AnyCPU</Platforms>
+
+		<StartupObject>ChmViewer.App</StartupObject>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="HtmlAgilityPack" Version="1.11.24" />
+		<PackageReference Include="CefSharp.Wpf.NETCore" Version="144.0.120" />
+	</ItemGroup>
+	<ItemGroup>
+	  <ProjectReference Include="..\..\lib\HtmlHelp.WinForms\HtmlHelp.WinForms.csproj" />
+	  <ProjectReference Include="..\..\lib\HtmlHelp.Wpf\HtmlHelp.Wpf.csproj" />
+	  <ProjectReference Include="..\..\lib\HtmlHelp\HtmlHelp.csproj" />
+	</ItemGroup>
+
+	<PropertyGroup Condition="'$(PlatformTarget)' == 'x86'">
+		<RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x86</RuntimeIdentifier>
+		<SelfContained Condition="'$(SelfContained)' == ''">false</SelfContained>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(PlatformTarget)' == 'x64'">
+		<RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
+		<SelfContained Condition="'$(SelfContained)' == ''">false</SelfContained>
+	</PropertyGroup>
+
+	<!--
+	  .Net 5.0+ Publish Settings for PublishSingleFile
+	  https://docs.microsoft.com/en-us/dotnet/core/deploying/single-file
+	  Defaults differ compared to .Net Core 3.1
+	-->
+	<PropertyGroup Condition="'$(PublishSingleFile)' == 'true'">
+		<!-- Extract all files to disk at runtime -->
+		<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+		<!-- Include our native files in the resulting exe -->
+		<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+		<!-- .Net 6.0+ supports compression -->
+		<!--<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>-->
+		<StartupObject>ChmViewer.ProgramPublishSingleFile</StartupObject>
+	</PropertyGroup>
+
+	<!--
+	  For SelfContained we'll self host the BrowserSubprocess (use the applications own exe)
+	  Instead of the provdied CefSharp.BrowserSubprocess.exe
+	-->
+	<PropertyGroup Condition="('$(TargetFramework)' == 'net8.0-windows' OR '$(TargetFramework)' == 'net9.0-windows' OR '$(TargetFramework)' == 'net10.0-windows') AND '$(SelfContained)' == 'true'">
+		<StartupObject>ChmViewer.ProgramPublishSingleFile</StartupObject>
+		<CefSharpExcludeSubProcessExe>true</CefSharpExcludeSubProcessExe>
+	</PropertyGroup>
+
+	<Target Name="CefSharpAfterBuildDebug" AfterTargets="AfterBuild">
+		<CallTarget Targets="CefSharpAfterBuildDiagnostic" />
+	</Target>
+</Project>

@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net10.0-windows</TargetFramework>
+		<OutputType>Library</OutputType>
+		<RootNamespace>HtmlHelp</RootNamespace>
+		<AssemblyName>HtmlHelp.WinForms</AssemblyName>
+		<LangVersion>latest</LangVersion>
+		<Nullable>disable</Nullable>
+		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+		<UseWindowsForms>true</UseWindowsForms>
+		<NoWarn>$(NoWarn);CA1416</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\HtmlHelp\HtmlHelp.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Update="Controls\helpIndex.cs">
+			<SubType>UserControl</SubType>
+		</Compile>
+		<Compile Update="Controls\helpSearch.cs">
+			<SubType>UserControl</SubType>
+		</Compile>
+		<Compile Update="Controls\TocTree.cs">
+			<SubType>UserControl</SubType>
+		</Compile>
+		<Compile Update="Controls\HelpProviderEx.cs">
+			<SubType>Component</SubType>
+		</Compile>
+		<Compile Update="Controls\TopicsFound.cs">
+			<SubType>Form</SubType>
+		</Compile>
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="Resources\ContentTree.bmp" />
+		<EmbeddedResource Include="Resources\HH11.bmp" />
+	</ItemGroup>
+</Project>
