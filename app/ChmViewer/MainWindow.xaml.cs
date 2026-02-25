@@ -19,7 +19,7 @@ namespace ChmViewer
     /// </summary>
     public partial class MainWindow : Window
     {
-        private ChmViewerViewModel readerVM;
+        private MainWindowViewModel readerVM;
         private const string InternetExplorerRootKey = @"Software\Microsoft\Internet Explorer";
         private const string BrowserEmulationKey = InternetExplorerRootKey + @"\Main\FeatureControl\FEATURE_BROWSER_EMULATION";
 		private string _libraryChmFileName;
@@ -201,7 +201,7 @@ namespace ChmViewer
                 string fileName = openFileDialog.FileName;
                 _libraryChmFileName = fileName;
                 SearchFileNameTextBlock.Text = fileName;
-                readerVM = new ChmViewerViewModel(fileName);
+                readerVM = new MainWindowViewModel(fileName);
                 HelpSearchButton.IsEnabled = true;
 				OpenCefViewerButton.IsEnabled = true;
             }

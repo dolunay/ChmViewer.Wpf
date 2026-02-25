@@ -5,9 +5,9 @@ using System.Data;
 
 namespace ChmViewer
 {
-    public class ChmViewerViewModel
+    public class MainWindowViewModel
     {
-        private readonly string LM_Key = @"Software\Sample\Help";
+        private readonly string LM_Key = @"Software\ChmViewer\Help";
         readonly HtmlHelpSystem _reader = null;
         DumpingInfo _dmpInfo = null;
 
@@ -22,7 +22,7 @@ namespace ChmViewer
         string _prefURLPrefix = "mk:@MSITStore:";
         bool _prefUseHH2TreePics = false;
 
-        public ChmViewerViewModel(string fileName)
+        public MainWindowViewModel(string fileName)
         {
             _reader = new HtmlHelpSystem();
             HtmlHelpSystem.UrlPrefix = "mk:@MSITStore:";
