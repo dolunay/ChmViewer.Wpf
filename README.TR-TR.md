@@ -12,8 +12,15 @@ Projeler:
 
 - `app/ChmViewer` (WPF Uygulama)
   - Hedef: `net10.0-windows`
-  - CHM seçme, arama ve görüntüleme UI akışı.
-  - WPF `WebBrowser` (IE tabanlı) ile basit görüntüleme ve ek olarak CefSharp tabanlı görüntüleyici.
+  - CefSharp tabanlı WPF kontrolü `HtmlHelp.Wpf.Controls.ChmViewerControl` barındırır.
+  - Dahili toolbar üzerindeki **Open** butonu ile CHM dosyası açmayı destekler.
+  - Komut satırı argümanı olarak `.chm` dosya yolu verilirse otomatik açmayı destekler.
+  - Toolbar ve statusbar görünürlüğü `ChmViewerViewModel.ShowToolbar` ve `ChmViewerViewModel.ShowStatusBar` üzerinden kontrol edilebilir.
+
+- `app/ChmViewerTest` (WPF Uygulama)
+  - Hedef: `net10.0-windows`
+  - Ek/eski test-demoları içerir (kütüphane tabanlı arama, opsiyonel CHM decompile + dosya arama).
+  - Örnek belgeler `app/ChmViewerTest/Documents/` altındadır.
 
 - `lib/HtmlHelp` (Çekirdek CHM okuma kütüphanesi)
   - Hedef: `net10.0`
@@ -21,28 +28,34 @@ Projeler:
 
 - `lib/HtmlHelp.Wpf` (WPF entegrasyonu)
   - Hedef: `net10.0-windows`
-  - WPF tarafında CHM içeriğini görüntülemek için yardımcı sınıflar ve CefSharp bağımlılıkları.
+  - WPF içinde gömülebilir `HtmlHelp.Wpf.Controls.ChmViewerControl` ve `HtmlHelp.Wpf.Controls.ChmViewerViewModel` bileşenlerini sağlar.
 
 - `lib/HtmlHelp.WinForms` (WinForms entegrasyonu)
   - Hedef: `net10.0-windows`
 
-## Uygulamada kullanılan yöntemler
+## Bu repodaki görüntüleyici seçenekleri
 
-Uygulama iki farklı yaklaşımı örnekler:
+### Gömülü CefSharp görüntüleyici (önerilen)
 
-### Yöntem 1: CHM içi arama (kütüphane tabanlı)
+Ana görüntüleyici deneyimi `HtmlHelp.Wpf.Controls.ChmViewerControl` ile sağlanır:
 
-`lib/HtmlHelp` içindeki CHM okuma altyapısı ile anahtar kelime araması yapılır ve bulunan içeriğin URL’si UI’da açılır.
+- Solda TOC
+- Sağda CefSharp Chromium tarayıcı
+- Opsiyonel toolbar (Back/Forward/Reload/Open)
+- Opsiyonel status bar
 
-Bu akış uygulamada `ChmViewerViewModel` üzerinden çalışır ve sonuçları `DataTable` olarak döndürür.
+Kontrol, `HtmlHelp.Wpf.Controls.ChmViewerViewModel` ile sürülür.
 
-### Yöntem 2: CHM’i HTML’e çıkarma + dosya arama
+### Eski/demo akışlar (`app/ChmViewerTest` içinde)
 
-Windows’in `hh.exe` aracı kullanılarak CHM dosyası seçilen bir klasöre “decompile” edilir, ardından `.htm` dosyaları içinde basit bir dosya adı aramasıyla hedef içerik bulunup görüntülenir.
+`app/ChmViewerTest` test/demolar için ek akışlar içerir:
+
+- `lib/HtmlHelp` ile CHM içinde anahtar kelime araması.
+- Windows `hh.exe` kullanarak CHM’i HTML’e çıkarma (opsiyonel).
 
 Notlar:
 
-- Bu yöntem `hh.exe` çağırdığı için yalnızca Windows’ta çalışır.
+- `hh.exe` yaklaşımı yalnızca Windows’ta çalışır.
 - Çıkarma işlemi için hedef klasöre yazma izniniz olmalıdır.
 
 ## Bağımlılıklar (NuGet paketleri)
@@ -91,7 +104,9 @@ Makinenizde `.NET 10 SDK` (Preview olabilir) kurulu olmalıdır.
 2. Başlangıç projesi olarak `ChmViewer` projesini seçin.
 3. Platform olarak `x64` (önerilir) veya `x86` seçin.
 4. `F5` ile çalıştırın.
-5. Uygulama içinden bir `.chm` dosyası seçin ve arama/görüntüleme akışlarını deneyin.
+5. Toolbar üzerindeki **Open** butonu ile bir `.chm` dosyası seçin.
+
+Demo/test akışlarını çalıştırmak isterseniz başlangıç projesi olarak `ChmViewerTest` seçebilirsiniz.
 
 ## Komut satırı ile derleme
 

@@ -9,9 +9,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChmViewerTest", "app\ChmVie
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HtmlHelp", "lib\HtmlHelp\HtmlHelp.csproj", "{CDFF32F7-DFFB-4F7F-A710-21D3FFDBA8A8}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{96E1C6D7-3253-47EC-A488-83468BB646AF}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".Solution Items", ".Solution Items", "{96E1C6D7-3253-47EC-A488-83468BB646AF}"
 	ProjectSection(SolutionItems) = preProject
 		README.md = README.md
+		README.TR-TR.md = README.TR-TR.md
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HtmlHelp.WinForms", "lib\HtmlHelp.WinForms\HtmlHelp.WinForms.csproj", "{671BE1B8-2AFC-9BC6-E20D-1F5BE1E00C55}"

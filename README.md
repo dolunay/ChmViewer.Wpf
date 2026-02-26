@@ -12,8 +12,15 @@ Projects:
 
 - `app/ChmViewer` (WPF Application)
   - Target: `net10.0-windows`
-  - UI flow for selecting a CHM file, searching, and viewing content.
-  - Uses the WPF `WebBrowser` control (IE-based) for basic viewing and also includes a CefSharp-based viewer.
+	- Hosts the CefSharp-based WPF control `HtmlHelp.Wpf.Controls.ChmViewerControl`.
+	- Supports opening a CHM file using the built-in toolbar **Open** button.
+	- Supports opening a CHM file via command-line argument (pass a `.chm` file path).
+	- Toolbar and status bar visibility can be controlled via `ChmViewerViewModel.ShowToolbar` and `ChmViewerViewModel.ShowStatusBar`.
+
+- `app/ChmViewerTest` (WPF Application)
+	- Target: `net10.0-windows`
+	- Demonstrates additional/legacy flows (library-based searching, optional CHM decompile + file search).
+	- Includes sample documents under `app/ChmViewerTest/Documents/`.
 
 - `lib/HtmlHelp` (Core CHM reader library)
   - Target: `net10.0`
@@ -21,28 +28,34 @@ Projects:
 
 - `lib/HtmlHelp.Wpf` (WPF integration)
   - Target: `net10.0-windows`
-  - WPF helpers for displaying CHM content and CefSharp dependencies.
+	- Provides `HtmlHelp.Wpf.Controls.ChmViewerControl` and `HtmlHelp.Wpf.Controls.ChmViewerViewModel` for embedding a CHM viewer in any WPF window.
 
 - `lib/HtmlHelp.WinForms` (WinForms integration)
   - Target: `net10.0-windows`
 
-## Methods demonstrated in the app
+## Viewer options in this repository
 
-The application showcases two different approaches:
+### Embedded CefSharp viewer (recommended)
 
-### Method 1: In-CHM search (library-based)
+The main viewer experience is implemented by `HtmlHelp.Wpf.Controls.ChmViewerControl`:
 
-Uses the CHM reader infrastructure in `lib/HtmlHelp` to search by keyword and opens the resulting content URL in the UI.
+- TOC on the left
+- CefSharp Chromium browser on the right
+- Optional toolbar (Back/Forward/Reload/Open)
+- Optional status bar
 
-This flow is driven by `ChmViewerViewModel` and returns results as a `DataTable`.
+The control is driven by `HtmlHelp.Wpf.Controls.ChmViewerViewModel`.
 
-### Method 2: Decompile CHM to HTML + file search
+### Legacy/demo flows (in `app/ChmViewerTest`)
 
-Uses Windows `hh.exe` to decompile the CHM into a selected folder, then searches the extracted `.htm` files by filename and displays the match.
+`app/ChmViewerTest` contains additional flows used for testing/demonstration, including:
+
+- In-CHM keyword search using `lib/HtmlHelp`.
+- Optional decompile-to-HTML flow using Windows `hh.exe`.
 
 Notes:
 
-- This method calls `hh.exe`, so it only works on Windows.
+- The `hh.exe` approach only works on Windows.
 - You need write permissions to the target folder.
 
 ## Dependencies (NuGet packages)
@@ -91,7 +104,9 @@ You need the `.NET 10 SDK` installed (may be Preview).
 2. Set `ChmViewer` as the startup project.
 3. Choose `x64` (recommended) or `x86`.
 4. Press `F5`.
-5. Select a `.chm` file and try the search/viewing flows.
+5. Select a `.chm` file using the toolbar **Open** button.
+
+If you want to run the demo/test flows instead, set `ChmViewerTest` as the startup project.
 
 ## Build from the command line
 
