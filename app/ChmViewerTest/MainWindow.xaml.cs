@@ -10,7 +10,7 @@ using System.Security;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using HtmlHelp.Wpf.Windows;
+using ChmViewerTest.Windows;
 
 namespace ChmViewerTest
 {
