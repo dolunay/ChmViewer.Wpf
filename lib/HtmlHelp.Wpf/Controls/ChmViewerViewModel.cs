@@ -24,6 +24,8 @@ public sealed class ChmViewerViewModel : INotifyPropertyChanged, IDisposable
 	private TOCItem _selectedTocItem;
 	private string _address = "about:blank";
 	private bool _isBusy;
+	private bool _showToolbar = true;
+	private bool _showStatusBar = true;
 
 	public ChmViewerViewModel(Dispatcher dispatcher = null)
 	{
@@ -60,6 +62,18 @@ public sealed class ChmViewerViewModel : INotifyPropertyChanged, IDisposable
 	{
 		get => _isBusy;
 		private set => SetProperty(ref _isBusy, value);
+	}
+
+	public bool ShowToolbar
+	{
+		get => _showToolbar;
+		set => SetProperty(ref _showToolbar, value);
+	}
+
+	public bool ShowStatusBar
+	{
+		get => _showStatusBar;
+		set => SetProperty(ref _showStatusBar, value);
 	}
 
 	internal string DocumentId

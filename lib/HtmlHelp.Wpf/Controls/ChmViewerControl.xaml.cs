@@ -1,9 +1,12 @@
 using CefSharp;
 using CefSharp.Handler;
 using HtmlHelp.Wpf.Internal;
+using Microsoft.Win32;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
+using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -13,6 +16,30 @@ namespace HtmlHelp.Wpf.Controls;
 
 public partial class ChmViewerControl : UserControl, IDisposable
 {
+	public static readonly DependencyProperty StatusTextProperty = DependencyProperty.Register(
+		nameof(StatusText),
+		typeof(string),
+		typeof(ChmViewerControl),
+		new PropertyMetadata("Ready"));
+
+	public static readonly DependencyProperty IsLoadingProperty = DependencyProperty.Register(
+		nameof(IsLoading),
+		typeof(bool),
+		typeof(ChmViewerControl),
+		new PropertyMetadata(false));
+
+	public static readonly DependencyProperty CanGoBackProperty = DependencyProperty.Register(
+		nameof(CanGoBack),
+		typeof(bool),
+		typeof(ChmViewerControl),
+		new PropertyMetadata(false));
+
+	public static readonly DependencyProperty CanGoForwardProperty = DependencyProperty.Register(
+		nameof(CanGoForward),
+		typeof(bool),
+		typeof(ChmViewerControl),
+		new PropertyMetadata(false));
+
 	public static readonly DependencyProperty ViewModelProperty = DependencyProperty.Register(
 		nameof(ViewModel),
 		typeof(ChmViewerViewModel),
@@ -47,7 +74,33 @@ public partial class ChmViewerControl : UserControl, IDisposable
 
 		Browser.RequestHandler = new ChmRequestHandler(this);
 		Browser.LoadError += Browser_LoadError;
+		Browser.LoadingStateChanged += Browser_LoadingStateChanged;
+		Browser.StatusMessage += Browser_StatusMessage;
 		Unloaded += OnUnloaded;
+	}
+
+	public string StatusText
+	{
+		get => (string)GetValue(StatusTextProperty);
+		private set => SetValue(StatusTextProperty, value);
+	}
+
+	public bool IsLoading
+	{
+		get => (bool)GetValue(IsLoadingProperty);
+		private set => SetValue(IsLoadingProperty, value);
+	}
+
+	public bool CanGoBack
+	{
+		get => (bool)GetValue(CanGoBackProperty);
+		private set => SetValue(CanGoBackProperty, value);
+	}
+
+	public bool CanGoForward
+	{
+		get => (bool)GetValue(CanGoForwardProperty);
+		private set => SetValue(CanGoForwardProperty, value);
 	}
 
 	public ChmViewerViewModel ViewModel
@@ -68,6 +121,57 @@ public partial class ChmViewerControl : UserControl, IDisposable
 		// Keep this as debug output only.
 		// Keep this as debug output only. This is a reusable library control.
 		Debug.WriteLine($"[CefSharp][LoadError] {e.ErrorCode} url={e.FailedUrl} text={e.ErrorText} main={e.Frame?.IsMain}");
+	}
+
+	private void Browser_LoadingStateChanged(object sender, LoadingStateChangedEventArgs e)
+	{
+		Dispatcher.BeginInvoke(() =>
+		{
+			if (_disposed)
+				return;
+
+			SetCurrentValue(IsLoadingProperty, e.IsLoading);
+			SetCurrentValue(CanGoBackProperty, e.CanGoBack);
+			SetCurrentValue(CanGoForwardProperty, e.CanGoForward);
+		});
+	}
+
+	private void Browser_StatusMessage(object sender, StatusMessageEventArgs e)
+	{
+		Dispatcher.BeginInvoke(() =>
+		{
+			if (_disposed)
+				return;
+
+			SetCurrentValue(StatusTextProperty, e.Value ?? string.Empty);
+		});
+	}
+
+	private void BackButton_Click(object sender, RoutedEventArgs e)
+		=> Browser.Back();
+
+	private void ForwardButton_Click(object sender, RoutedEventArgs e)
+		=> Browser.Forward();
+
+	private void ReloadButton_Click(object sender, RoutedEventArgs e)
+		=> Browser.Reload();
+
+	private void OpenButton_Click(object sender, RoutedEventArgs e)
+	{
+		var dialog = new OpenFileDialog
+		{
+			DefaultExt = ".chm",
+			Filter = "CHM files (*.chm)|*.chm"
+		};
+
+		var result = dialog.ShowDialog();
+		if (result != true)
+			return;
+
+		if (string.IsNullOrWhiteSpace(dialog.FileName) || !File.Exists(dialog.FileName))
+			return;
+
+		SetCurrentValue(ChmFilePathProperty, dialog.FileName);
 	}
 
 	private sealed class ChmRequestHandler(ChmViewerControl owner) : RequestHandler
@@ -255,15 +359,33 @@ public partial class ChmViewerControl : UserControl, IDisposable
 		_autoLoadCts = new CancellationTokenSource();
 		try
 		{
+			SetCurrentValue(StatusTextProperty, "Loading...");
 			await ViewModel.LoadAsync(chmFilePath, _autoLoadCts.Token);
+			SetCurrentValue(StatusTextProperty, "Ready");
 		}
 		catch (OperationCanceledException)
 		{
 			// ignore
 		}
-		catch (Exception ex)
+		catch (ArgumentException ex)
 		{
 			Debug.WriteLine($"[CefSharp][CHM] AutoLoad failed path={chmFilePath} error={ex}");
+			SetCurrentValue(StatusTextProperty, ex.Message);
+		}
+		catch (IOException ex)
+		{
+			Debug.WriteLine($"[CefSharp][CHM] AutoLoad failed path={chmFilePath} error={ex}");
+			SetCurrentValue(StatusTextProperty, ex.Message);
+		}
+		catch (UnauthorizedAccessException ex)
+		{
+			Debug.WriteLine($"[CefSharp][CHM] AutoLoad failed path={chmFilePath} error={ex}");
+			SetCurrentValue(StatusTextProperty, ex.Message);
+		}
+		catch (SecurityException ex)
+		{
+			Debug.WriteLine($"[CefSharp][CHM] AutoLoad failed path={chmFilePath} error={ex}");
+			SetCurrentValue(StatusTextProperty, ex.Message);
 		}
 	}
 
@@ -279,6 +401,8 @@ public partial class ChmViewerControl : UserControl, IDisposable
 
 		Unloaded -= OnUnloaded;
 		Browser.LoadError -= Browser_LoadError;
+		Browser.LoadingStateChanged -= Browser_LoadingStateChanged;
+		Browser.StatusMessage -= Browser_StatusMessage;
 		Browser.RequestHandler = null;
 		DetachFromViewModel(ViewModel);
 

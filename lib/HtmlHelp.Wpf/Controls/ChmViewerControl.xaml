@@ -1,35 +1,71 @@
 <UserControl x:Class="HtmlHelp.Wpf.Controls.ChmViewerControl"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:cefSharp="clr-namespace:CefSharp.Wpf;assembly=CefSharp.Wpf"
-             xmlns:controls="clr-namespace:HtmlHelp.Wpf.Controls"
-             xmlns:htmlHelp="clr-namespace:HtmlHelp;assembly=HtmlHelp"
-             mc:Ignorable="d"
-             d:DesignHeight="450" d:DesignWidth="800">
+			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:cefSharp="clr-namespace:CefSharp.Wpf;assembly=CefSharp.Wpf"
+			 xmlns:controls="clr-namespace:HtmlHelp.Wpf.Controls"
+			 xmlns:htmlHelp="clr-namespace:HtmlHelp;assembly=HtmlHelp"
+			 mc:Ignorable="d"
+			 d:DesignHeight="450" d:DesignWidth="800">
 
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="280" />
-            <ColumnDefinition Width="5" />
-            <ColumnDefinition Width="*" />
-        </Grid.ColumnDefinitions>
+	<UserControl.Resources>
+		<BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+	</UserControl.Resources>
 
-        <Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}">
-			<TreeView x:Name="TocTree"
-					  ItemsSource="{Binding TocItems}"
-					  controls:TreeViewSelectedItemBehavior.SelectedItem="{Binding SelectedTocItem, Mode=TwoWay}">
-                <TreeView.Resources>
-                    <HierarchicalDataTemplate DataType="{x:Type htmlHelp:TOCItem}" ItemsSource="{Binding Children}">
-                        <TextBlock Text="{Binding Name}" />
-                    </HierarchicalDataTemplate>
-                </TreeView.Resources>
-            </TreeView>
-        </Border>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+			<RowDefinition Height="Auto" />
+		</Grid.RowDefinitions>
 
-        <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent" />
+		<ToolBarTray Grid.Row="0" Visibility="{Binding ShowToolbar, Converter={StaticResource BoolToVisibility}}">
+			<ToolBar>
+				<Button x:Name="BackButton" Content="Back" Click="BackButton_Click" IsEnabled="{Binding CanGoBack, RelativeSource={RelativeSource AncestorType={x:Type controls:ChmViewerControl}}}" />
+				<Button x:Name="ForwardButton" Content="Forward" Click="ForwardButton_Click" IsEnabled="{Binding CanGoForward, RelativeSource={RelativeSource AncestorType={x:Type controls:ChmViewerControl}}}" />
+				<Button x:Name="ReloadButton" Content="Reload" Click="ReloadButton_Click" />
+				<Separator />
+				<Button x:Name="OpenButton" Content="Open" Click="OpenButton_Click" />
+				<Separator />
+				<TextBox Width="400"
+						 Margin="4,0,0,0"
+						 IsReadOnly="True"
+						 Text="{Binding ElementName=Browser, Path=Address}" />
+			</ToolBar>
+		</ToolBarTray>
 
-		<cefSharp:ChromiumWebBrowser x:Name="Browser" Address="{Binding Address}" Grid.Column="2" />
-    </Grid>
+		<Grid Grid.Row="1">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="280" />
+				<ColumnDefinition Width="5" />
+				<ColumnDefinition Width="*" />
+			</Grid.ColumnDefinitions>
+
+			<Border Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}">
+				<TreeView x:Name="TocTree"
+						  ItemsSource="{Binding TocItems}"
+						  controls:TreeViewSelectedItemBehavior.SelectedItem="{Binding SelectedTocItem, Mode=TwoWay}">
+					<TreeView.Resources>
+						<HierarchicalDataTemplate DataType="{x:Type htmlHelp:TOCItem}" ItemsSource="{Binding Children}">
+							<TextBlock Text="{Binding Name}" />
+						</HierarchicalDataTemplate>
+					</TreeView.Resources>
+				</TreeView>
+			</Border>
+
+			<GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent" />
+
+			<cefSharp:ChromiumWebBrowser x:Name="Browser" Address="{Binding Address}" Grid.Column="2" />
+		</Grid>
+
+		<StatusBar Grid.Row="2" Visibility="{Binding ShowStatusBar, Converter={StaticResource BoolToVisibility}}">
+			<StatusBarItem>
+				<TextBlock Text="{Binding StatusText, RelativeSource={RelativeSource AncestorType={x:Type controls:ChmViewerControl}}}" />
+			</StatusBarItem>
+			<StatusBarItem HorizontalAlignment="Right">
+				<ProgressBar Width="100" Height="14" IsIndeterminate="True" Visibility="{Binding IsLoading, RelativeSource={RelativeSource AncestorType={x:Type controls:ChmViewerControl}}, Converter={StaticResource BoolToVisibility}}" />
+			</StatusBarItem>
+		</StatusBar>
+	</Grid>
 </UserControl>
